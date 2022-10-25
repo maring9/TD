@@ -51,6 +51,13 @@ int space_to_save_chars(int num_chars)
     return num_chars < AT_COMMAND_MAX_LINE_SIZE;
 }
 
+void adjust_line_count()
+{
+    if (line_count < AT_COMMAND_MAX_LINES && line_count > aux_row) {
+        aux_row = line_count;
+    }
+}
+
 // Function to print FSM data
 void print_data() {
     printf("Transmission %d:\n", num_transmissions);
@@ -80,7 +87,7 @@ void reset_fsm() {
     reset_states();
 }
 
-void finished_line()
+void finished_parsing_line()
 {
     line_count++;
     column_index = 0;
@@ -97,14 +104,14 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
 
     if (space_to_save_lines(line_count) && space_to_save_chars(column_index)) {
             if (char_is(LF, current_char)) {
-                finished_line();
+                finished_parsing_line();
             } else if (!char_is(CR, current_char) && !char_is('+', current_char)) {
                 save_char(current_char);
             }
         }
-    if (line_count > aux_row && line_count < AT_COMMAND_MAX_LINES) {
-        aux_row = line_count;
-    }
+    
+    adjust_line_count();
+
     switch (current_state)
     {
     case 0:
