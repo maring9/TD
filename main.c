@@ -113,24 +113,21 @@ int main(int argc, char *argv[])
 
             if(machine_exit_with_error(return_state))
             {
-                printf("Ready with ERROR\n");
+                // printf("Ready with ERROR\n");
+
                 return_state = STATE_MACHINE_NOT_READY;
+
                 return 0;
             }
             if(machine_exit_ok(return_state))
             {
-                printf("Ready OK\n");
+                // printf("Ready OK\n");
+
                 return_state = STATE_MACHINE_NOT_READY;
-            }
-            if(machine_full(return_state))
-            {
-                printf("State machine full, not saving any further data\n");
             }
         }
     }
     
-    // print_data();
-
     fclose(file);
 
     return 0;

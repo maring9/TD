@@ -1,9 +1,19 @@
 #include "parser.h"
 #include <stdio.h>
 #include <string.h>
+
+#define CR 0x0D
+#define LF 0x0A
+
 AT_COMMAND_DATA command_data;
 
+int char_is(uint8_t expected_char, uint8_t current_char)
+{
+    return current_char == expected_char;
+}
+
 // Wrappers for readability
+// Not used
 int char_is_CR(uint8_t current_char)
 {
     return current_char == 0x0D;
@@ -29,6 +39,13 @@ int space_to_save_chars(int num_chars)
     return num_chars < AT_COMMAND_MAX_LINE_SIZE;
 }
 
+
+void initialize_fsm()
+{
+    command_data.line_count = -1;
+    command_data.column_index = 0;
+    command_data.rows = 0;
+}
 int current_state = 0;
 int rows = 0;
 int line = -1;
@@ -49,13 +66,14 @@ void restart() {
     line = -1;
     column = 0;
 }
+
 STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
 {
-    if (line < AT_COMMAND_MAX_LINES && column < AT_COMMAND_MAX_LINE_SIZE) {
-            if (current_char == 0x0A) {
+    if (space_to_save_lines(line) && space_to_save_chars(column)) {
+            if (char_is(LF, current_char)) {
                 line++;
                 column = 0;
-            } else if (current_char != 0x0D) {
+            } else if (!char_is(CR, current_char)) {
                 command_data.data[line][column] = current_char;
                 column++;
             }
@@ -67,7 +85,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     {
     case 0:
     {
-        if (char_is_CR(current_char))
+        if (char_is(CR, current_char))
         {
             current_state = 1;
 
@@ -82,7 +100,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 1:
     {
-        if (char_is_LF(current_char))
+        if (char_is(LF, current_char))
         {
             current_state = 2;
             // printf("Current state: 1, got char %d\n", current_char);
@@ -96,19 +114,19 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 2:
     {
-        if (current_char == 'O')
+        if (char_is('O', current_char))
         {
             current_state = 3;
             // printf("Current state: 2, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
-        else if (current_char == 'E')
+        else if (char_is('E', current_char))
         {
             current_state = 7;
             // printf("Current state: 2, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
-        else if (current_char == '+')
+        else if (char_is('+', current_char))
         {
             current_state = 12;
             // printf("Current state: 2, got char %c\n", current_char);
@@ -122,7 +140,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 3:
     {
-        if (current_char == 'K')
+        if (char_is('K', current_char))
         {
             current_state = 4;
             // printf("Current state: 3, got char %c\n", current_char);
@@ -136,7 +154,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 4:
     {
-        if (char_is_CR(current_char))
+        if (char_is(CR, current_char))
         {
             current_state = 5;
             // printf("Current state: 4, got char %d\n", current_char);
@@ -150,13 +168,12 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 5:
     {
-        if (char_is_LF(current_char))
+        if (char_is(LF, current_char))
         {
             show();
             restart();
-            //current_state = 0;
             // printf("Current state: 5, got char %d\n", current_char);
-            //printf("No data - parsed CRLF OK CRLF\n");
+            // printf("No data - parsed CRLF OK CRLF\n");
             return STATE_MACHINE_READY_OK;
         }
         else
@@ -165,15 +182,9 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             return STATE_MACHINE_READY_WITH_ERROR;
         }
     }
-    // Not needed
-    case 6:
-    {
-        // printf("Current state: 6, transmision ready\n");
-        return STATE_MACHINE_READY_OK;
-    }
     case 7:
     {
-        if (current_char == 'R')
+        if (char_is('R', current_char))
         {
             current_state = 8;
             // printf("Current state: 7, got char %c\n", current_char);
@@ -187,7 +198,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 8:
     {
-        if (current_char == 'R')
+        if (char_is('R', current_char))
         {
             current_state = 9;
             // printf("Current state: 8, got char %c\n", current_char);
@@ -201,7 +212,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 9:
     {
-        if (current_char == 'O')
+        if (char_is('O', current_char))
         {
             current_state = 10;
             // printf("Current state: 9, got char %c\n", current_char);
@@ -215,7 +226,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 10:
     {
-        if (current_char == 'R')
+        if (char_is('R', current_char))
         {
             current_state = 4;
             // printf("Current state: 10, got char %c\n", current_char);
@@ -229,7 +240,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 11:
     {
-        if (char_is_CR(current_char))
+        if (char_is(CR, current_char))
         {
             current_state = 12;
             // printf("Current state: 11, got char %d\n", current_char);
@@ -243,11 +254,11 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 12:
     {
-        if (current_char >= 32 && current_char <= 122)
+        if (char_is_valid_ascii(current_char))
         {
             return STATE_MACHINE_NOT_READY;
         }
-        else if (current_char == 0x0D)
+        else if (char_is(CR, current_char))
         {
             current_state = 13;
             return STATE_MACHINE_NOT_READY;
@@ -258,60 +269,60 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             return STATE_MACHINE_READY_WITH_ERROR;
         }
     }
-    // Same as state 6
     case 13:
     {
-        if (current_char == 0x0A)
+        if (char_is(LF, current_char))
         {
             current_state = 14;
             return STATE_MACHINE_NOT_READY;
         }
         else
         {
+            printf("Error in state 13, expected LF, got %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
         // printf("Current state: 13, transmision ready\n");
-        //return STATE_MACHINE_READY_OK;
+        // return STATE_MACHINE_READY_OK;
     }
     case 14:
     {
-        if (current_char == 0x0D)
+        if (char_is(CR, current_char))
         {
             current_state = 15;
             return STATE_MACHINE_NOT_READY;
         }
-        else if (current_char == '+')
+        else if (char_is('+', current_char))
         {
             current_state = 12;
             return STATE_MACHINE_NOT_READY;
         }
         else
         {
-            printf("Error in state 15, expected CR, +, got char %d\n", current_char);
+            printf("Error in state 14, expected CR, +, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
     }
     case 15:
     {   
-        if (current_char == 0x0A)
+        if (char_is(LF, current_char))
         {
             current_state = 16;
             return STATE_MACHINE_NOT_READY;
         }
         else
         {
-            printf("Error in state 16, expected CR, got char %d\n", current_char);
+            printf("Error in state 15, expected LF, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
     }
     case 16:
     {
-        if (current_char == 'O')
+        if (char_is('O', current_char))
         {
             current_state = 3;
             return STATE_MACHINE_NOT_READY;
         }
-        else if (current_char == 'E')
+        else if (char_is('E', current_char))
         {
             current_state = 7;
             return STATE_MACHINE_NOT_READY;
@@ -323,7 +334,8 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             return STATE_MACHINE_READY_WITH_ERROR;
         }
     }
-    
+
     default: return STATE_MACHINE_NOT_READY;
+
     }
 }

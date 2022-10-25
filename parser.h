@@ -10,7 +10,8 @@ typedef struct
 {
     uint8_t data[AT_COMMAND_MAX_LINES][AT_COMMAND_MAX_LINE_SIZE + 1];
     uint8_t line_count;
-    uint8_t status;
+    uint8_t column_index;
+    uint8_t rows;
 } AT_COMMAND_DATA;
 
 extern AT_COMMAND_DATA command_data;
