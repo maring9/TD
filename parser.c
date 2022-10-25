@@ -1,6 +1,6 @@
 #include "parser.h"
 #include <stdio.h>
-
+#include <string.h>
 AT_COMMAND_DATA command_data;
 
 // Wrappers for readability
@@ -29,12 +29,40 @@ int space_to_save_chars(int num_chars)
     return num_chars < AT_COMMAND_MAX_LINE_SIZE;
 }
 
+int current_state = 0;
+int rows = 0;
+int line = -1;
+int column = 0;
+void show() {
+    printf("\nCONTENT\n\n");
+    for (int i = 0; i <= rows; i++) {
+        printf("%s\n", command_data.data[i]);
+    }
+}
+
+void restart() {
+    for (int i = 0; i <= rows; i++) {
+        memset(command_data.data[i], 0, sizeof command_data.data[i]);
+    }
+    current_state = 0;
+    rows = 0;
+    line = -1;
+    column = 0;
+}
 STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
 {
-    // Initialization
-    static uint8_t current_state = 0;
-    static uint8_t column_index = 0;
-
+    if (line < AT_COMMAND_MAX_LINES && column < AT_COMMAND_MAX_LINE_SIZE) {
+            if (current_char == 0x0A) {
+                line++;
+                column = 0;
+            } else if (current_char != 0x0D) {
+                command_data.data[line][column] = current_char;
+                column++;
+            }
+        }
+    if (line > rows && line < AT_COMMAND_MAX_LINES) {
+        rows = line;
+    }
     switch (current_state)
     {
     case 0:
@@ -51,7 +79,6 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 0, expected CR, got %d\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 1:
     {
@@ -66,8 +93,6 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 1, expected LF, got %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
-        
     }
     case 2:
     {
@@ -85,7 +110,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
         }
         else if (current_char == '+')
         {
-            current_state = 15;
+            current_state = 12;
             // printf("Current state: 2, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
@@ -94,7 +119,6 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 2, expected + , E, O, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 3:
     {
@@ -109,7 +133,6 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 3, expected K, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 4:
     {
@@ -124,15 +147,16 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 4, expected CR, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 5:
     {
         if (char_is_LF(current_char))
         {
-            current_state = 0;
+            show();
+            restart();
+            //current_state = 0;
             // printf("Current state: 5, got char %d\n", current_char);
-            printf("No data - parsed CRLF OK CRLF\n");
+            //printf("No data - parsed CRLF OK CRLF\n");
             return STATE_MACHINE_READY_OK;
         }
         else
@@ -160,7 +184,6 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 7, expected R, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 8:
     {
@@ -175,7 +198,6 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 8, expected R, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 9:
     {
@@ -190,13 +212,12 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 9, expected O, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 10:
     {
         if (current_char == 'R')
         {
-            current_state = 11;
+            current_state = 4;
             // printf("Current state: 10, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
@@ -205,7 +226,6 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 10, expected R, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 11:
     {
@@ -220,16 +240,17 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             printf("Error in state 11, expected CR, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
     case 12:
     {
-        if (char_is_LF(current_char))
+        if (current_char >= 32 && current_char <= 122)
         {
-            current_state = 0;
-            // printf("Current state: 12, got char %d\n", current_char);
-            printf("No data - parsed CRLF ERROR CRLF\n");
-            return STATE_MACHINE_READY_OK;
+            return STATE_MACHINE_NOT_READY;
+        }
+        else if (current_char == 0x0D)
+        {
+            current_state = 13;
+            return STATE_MACHINE_NOT_READY;
         }
         else
         {
@@ -240,179 +261,69 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     // Same as state 6
     case 13:
     {
-        // printf("Current state: 13, transmision ready\n");
-        return STATE_MACHINE_READY_OK;
-    }
-    case 15:
-    {
-        // printf("In case 15\n");
-        if (char_is_valid_ascii(current_char))
+        if (current_char == 0x0A)
         {
-            // printf("Char is valid ascii\n");
-            if (space_to_save_lines(command_data.line_count))
-            {
-                // printf("Still space to save lines\n");
-                if (space_to_save_chars(column_index))
-                {
-                    // printf("Still space to save chars\n");
-                    // Save data
-                    // printf("Current state: 15, adding %c at line %d col %d\n", current_char, command_data.line_count, column_index);
-                    command_data.data[command_data.line_count][column_index] = current_char;
-                    column_index++;
-                    // //printf("New char will be placed at %d %d\n", command_data.line_count, column_index);
-                    current_state = 16;
-                    return STATE_MACHINE_NOT_READY;
-                }
-            }
+            current_state = 14;
+            return STATE_MACHINE_NOT_READY;
         }
         else
         {
-            printf("Error in state 15, expected ASCII [32, 126], got char %d\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
+        // printf("Current state: 13, transmision ready\n");
+        //return STATE_MACHINE_READY_OK;
     }
-    case 16:
-    {   
-        // printf("In case 16\n");
-        if (char_is_valid_ascii(current_char))
-        {   
-            // printf("Char is valid ascii\n");
-            if (space_to_save_lines(command_data.line_count))
-            {
-                // printf("Still space to save lines\n");
-                if (space_to_save_chars(column_index))
-                {
-                    // printf("Still space to save chars\n");
-                    // Save data
-                    command_data.data[command_data.line_count][column_index] = current_char;
-                    // printf("Current state: 16, adding %c at line %d col %d\n", current_char, command_data.line_count, column_index);
-                    column_index++;
-                    // printf("New char will be placed at %d %d\n", command_data.line_count, column_index);
-                    current_state = 16;
-                    return STATE_MACHINE_NOT_READY;
-                }
-            }
-            
-        }
-        else if (char_is_CR(current_char))
+    case 14:
+    {
+        if (current_char == 0x0D)
         {
-            // printf("Got CR\n");
-            if (space_to_save_lines(command_data.line_count))
-            {
-                // printf("Still space to save lines\n");
-                if (space_to_save_chars(column_index))
-                {
-                    // printf("Still space to save chars\n");
-                    current_state = 17;
-                    // printf("Current state: 16, got char %d\n", current_char);
-                    return STATE_MACHINE_NOT_READY;
-                }
-            }
-            else
-            {
-                return STATE_MACHINE_FULL;
-            }
-            
+            current_state = 15;
+            return STATE_MACHINE_NOT_READY;
+        }
+        else if (current_char == '+')
+        {
+            current_state = 12;
+            return STATE_MACHINE_NOT_READY;
+        }
+        else
+        {
+            printf("Error in state 15, expected CR, +, got char %d\n", current_char);
+            return STATE_MACHINE_READY_WITH_ERROR;
+        }
+    }
+    case 15:
+    {   
+        if (current_char == 0x0A)
+        {
+            current_state = 16;
+            return STATE_MACHINE_NOT_READY;
         }
         else
         {
             printf("Error in state 16, expected CR, got char %d\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
-    case 17:
-    {
-        // printf("In case 17\n");
-        if (char_is_LF(current_char)) 
-        {
-            // printf("Char is LF\n");
-            current_state = 18;
-            // printf("Current state: 17, got char %d\n", current_char);
-            return STATE_MACHINE_NOT_READY;
-        }
-        else
-        {
-            printf("Error in state 17, expected LF, got char %c\n", current_char);
-            return STATE_MACHINE_READY_WITH_ERROR;
-        }
-        break;
-    }
-    case 18:
-    {
-        // printf("In case 18\n");
-        if (char_is_CR(current_char))
-        {
-            //printf("Got char CR\n");
-            // Save data
-            command_data.data[command_data.line_count][column_index] = '\0';
-            // printf("String ended on %d %d\n", command_data.line_count, column_index);
-            command_data.line_count++;
-
-            column_index = 0;
-            // printf("New char will be placed at %d %d\n", command_data.line_count, column_index);
-            
-            current_state = 19;
-            // printf("Current state: 18, got char %d\n", current_char);
-            return STATE_MACHINE_NOT_READY;
-        }
-        else if (current_char == '+')
-        {
-            // printf("Got char +\n");
-            // Finished parsing a line, resetting column indx
-            command_data.line_count++;
-
-            column_index = 0;
-            // printf("New char will be placed at %d %d\n", command_data.line_count, column_index);
-            current_state = 16;
-            // printf("Current state: 18, got char %c\n", current_char);
-            return STATE_MACHINE_NOT_READY;
-        }
-        else
-        {
-            printf("Error in state 18, expected +, CR got char %c\n", current_char);
-            return STATE_MACHINE_READY_WITH_ERROR;
-        }
-        break;
-    }
-    case 19:
-    {
-        if (char_is_LF(current_char))
-        {
-            current_state = 20;
-            //printf("Current state: 19, got char %d\n", current_char);
-            return STATE_MACHINE_NOT_READY;
-        }
-        else
-        {
-            printf("Error in state 19, expected LF, got char %c\n", current_char);
-            return STATE_MACHINE_READY_WITH_ERROR;
-        }
-        break;
-    }
-    case 20:
+    case 16:
     {
         if (current_char == 'O')
         {
             current_state = 3;
-            //printf("Current state: 20, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
         else if (current_char == 'E')
         {
             current_state = 7;
-            //printf("Current state: 20, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
+
         else
         {
-            printf("Error in state 20, expected O, E, got char %c\n", current_char);
+            printf("Error in state 16, expected O, E, got char %c\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
-        break;
     }
-
+    
+    default: return STATE_MACHINE_NOT_READY;
     }
-    //return STATE_MACHINE_NOT_READY;
 }

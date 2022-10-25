@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
         }
     }
     
-    print_data();
+    // print_data();
 
     fclose(file);
 
