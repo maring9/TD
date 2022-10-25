@@ -6,7 +6,11 @@
 #define LF 0x0A
 
 AT_COMMAND_DATA command_data;
-
+int current_state = 0;
+int rows = 0;
+int line = -1;
+int column = 0;
+int num_transmissions = 0;
 int char_is(uint8_t expected_char, uint8_t current_char)
 {
     return current_char == expected_char;
@@ -39,19 +43,18 @@ int space_to_save_chars(int num_chars)
     return num_chars < AT_COMMAND_MAX_LINE_SIZE;
 }
 
-
+/*
 void initialize_fsm()
 {
-    command_data.line_count = -1;
-    command_data.column_index = 0;
-    command_data.rows = 0;
+    num_transmissions = 0;
+    line = -1;
+    column = 0;
+    rows = 0;
 }
-int current_state = 0;
-int rows = 0;
-int line = -1;
-int column = 0;
+*/
+
 void show() {
-    printf("\nCONTENT\n\n");
+    printf("Transmission %d:\n", num_transmissions);
     for (int i = 0; i <= rows; i++) {
         printf("%s\n", command_data.data[i]);
     }
@@ -69,11 +72,12 @@ void restart() {
 
 STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
 {
+
     if (space_to_save_lines(line) && space_to_save_chars(column)) {
             if (char_is(LF, current_char)) {
                 line++;
                 column = 0;
-            } else if (!char_is(CR, current_char)) {
+            } else if (!char_is(CR, current_char) && !char_is('+', current_char)) {
                 command_data.data[line][column] = current_char;
                 column++;
             }
@@ -170,6 +174,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     {
         if (char_is(LF, current_char))
         {
+            num_transmissions++;
             show();
             restart();
             // printf("Current state: 5, got char %d\n", current_char);

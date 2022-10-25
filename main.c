@@ -4,16 +4,6 @@
 
 #include "parser.h"
 
-// Function to read final data from the struct
-void print_data()
-{
-    printf("\n");
-    for(int i = 0; i < command_data.line_count; ++i)
-    {
-        printf("%s \n", command_data.data[i]);
-    }
-}
-
 // Wrapper for testing for EOF
 int eof_reached(FILE *file)
 {
@@ -76,8 +66,6 @@ int main(int argc, char *argv[])
     
     // Initialization
     STATE_MACHINE_RETURN_VALUE return_state = STATE_MACHINE_NOT_READY;
-    command_data.line_count = 0;
-
 
     FILE *file = fopen(argv[1], "rb");
     
