@@ -7,7 +7,6 @@
 
 // Save data
 AT_COMMAND_DATA command_data;
-
 int current_state = 0;
 int num_transmissions = 0;
 int aux_row = 0;
@@ -62,7 +61,11 @@ void adjust_line_count()
 void print_data() {
     printf("Transmission %d:\n", num_transmissions);
     for (int i = 0; i <= aux_row; i++) {
-        printf("%s\n", command_data.data[i]);
+        if (command_data.data[i][0] != '\0')
+        {
+            printf("%s\n", command_data.data[i]);
+        }
+        
     }
 }
 
@@ -105,8 +108,17 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     if (space_to_save_lines(line_count) && space_to_save_chars(column_index)) {
             if (char_is(LF, current_char)) {
                 finished_parsing_line();
-            } else if (!char_is(CR, current_char) && !char_is('+', current_char)) {
-                save_char(current_char);
+            } else if (!char_is(CR, current_char) && !char_is('+', current_char) && !(char_is('K', current_char))) {
+                if (!char_is('E', current_char) && !char_is('R', current_char) && !char_is('O', current_char))
+                {
+                    // printf("char: %d", current_char);
+                    save_char(current_char);
+                }
+                else if (char_is('O', current_char) && current_state == 12)
+                {
+                    save_char(current_char);
+                }
+                
             }
         }
     
@@ -174,6 +186,8 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
         if (char_is('K', current_char))
         {
             current_state = 4;
+
+            command_data.flag = 1;
             // printf("Current state: 3, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
@@ -203,7 +217,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
         {
             num_transmissions++;
             print_data();
-            reset_fsm();
+            // reset_fsm();
             // printf("Current state: 5, got char %d\n", current_char);
             // printf("No data - parsed CRLF OK CRLF\n");
             return STATE_MACHINE_READY_OK;
@@ -260,6 +274,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     {
         if (char_is('R', current_char))
         {
+            command_data.flag = 0;
             current_state = 4;
             // printf("Current state: 10, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
