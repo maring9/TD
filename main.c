@@ -149,8 +149,8 @@ int main(int argc, char *argv[])
                 {
                     printf("Parse ERROR\n\n");
                 }
-                uint8_t rssi = extract_data();
-                printf("RSSI: %d\n", rssi);
+                //uint8_t rssi = extract_data();
+                //printf("RSSI: %d\n", rssi);
                 
                 return_state = STATE_MACHINE_NOT_READY;
             }

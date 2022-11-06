@@ -114,7 +114,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
                     // printf("char: %d", current_char);
                     save_char(current_char);
                 }
-                else if (char_is('O', current_char) && current_state == 12)
+                else if ((char_is('O', current_char) && current_state == 12) || (char_is('E', current_char) && current_state == 12) || (char_is('R', current_char) && current_state == 12))
                 {
                     save_char(current_char);
                 }
@@ -217,7 +217,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
         {
             num_transmissions++;
             print_data();
-            // reset_fsm();
+            reset_fsm();
             // printf("Current state: 5, got char %d\n", current_char);
             // printf("No data - parsed CRLF OK CRLF\n");
             return STATE_MACHINE_READY_OK;
