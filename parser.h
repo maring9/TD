@@ -9,6 +9,7 @@
 typedef struct
 {
     uint8_t data[AT_COMMAND_MAX_LINES][AT_COMMAND_MAX_LINE_SIZE + 1];
+    uint8_t flag; // 1 - OK , 0 - ERROR
 } AT_COMMAND_DATA;
 
 extern AT_COMMAND_DATA command_data;
@@ -23,5 +24,10 @@ typedef enum
 
 STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char);
 
+extern int current_state;
+extern int num_transmissions;
+extern int aux_row;
+extern int line_count;
+extern int column_index;
 
 #endif

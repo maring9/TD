@@ -3,6 +3,37 @@
 #include <string.h>
 
 #include "parser.h"
+uint8_t extract_data()
+{
+    uint8_t res[] =  "";
+    int j = 0;
+    int stop = 0;
+    for(int i = 0; i < aux_row; ++i)
+    {
+        if (stop)
+        {
+            break;
+        }
+        for(int k = 0; k < strlen(command_data.data[i]); ++k)
+        {
+            //printf("%c ", command_data.data[i][k]);
+            if (command_data.data[i][k] == ',')
+            {
+                stop = 1;
+                break;
+            }
+            if (command_data.data[i][k] >= 48 && command_data.data[i][k] <= 57)
+            {
+                res[j] += command_data.data[i][k];
+                j++;
+            }
+        }
+    }
+
+    uint8_t rssi = atoi(res);
+
+    return rssi;
+}
 
 // Wrapper for testing for EOF
 int eof_reached(FILE *file)
@@ -110,7 +141,17 @@ int main(int argc, char *argv[])
             if(machine_exit_ok(return_state))
             {
                 // printf("Ready OK\n");
-
+                if (command_data.flag == 1)
+                {
+                    printf("Parse OK\n\n");
+                }
+                else
+                {
+                    printf("Parse ERROR\n\n");
+                }
+                //uint8_t rssi = extract_data();
+                //printf("RSSI: %d\n", rssi);
+                
                 return_state = STATE_MACHINE_NOT_READY;
             }
         }
