@@ -216,8 +216,8 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
         if (char_is(LF, current_char))
         {
             num_transmissions++;
-            print_data();
-            reset_fsm();
+            // print_data();
+            // reset_fsm();
             // printf("Current state: 5, got char %d\n", current_char);
             // printf("No data - parsed CRLF OK CRLF\n");
             return STATE_MACHINE_READY_OK;
