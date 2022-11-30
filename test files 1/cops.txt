@@ -1,0 +1,4 @@
+
++COPS: 0,0,"Vodafone RO",2
+
+OK

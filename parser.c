@@ -157,6 +157,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
     }
     case 2:
     {
+        // printf("%d\n", current_char);
         if (char_is('O', current_char))
         {
             current_state = 3;
@@ -169,7 +170,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
             // printf("Current state: 2, got char %c\n", current_char);
             return STATE_MACHINE_NOT_READY;
         }
-        else if (char_is('+', current_char))
+        else if (char_is('+', current_char) || (current_char >= 32 && current_char <= 122))
         {
             current_state = 12;
             // printf("Current state: 2, got char %c\n", current_char);
@@ -216,8 +217,8 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
         if (char_is(LF, current_char))
         {
             num_transmissions++;
-            // print_data();
-            // reset_fsm();
+            print_data();
+            //reset_fsm();
             // printf("Current state: 5, got char %d\n", current_char);
             // printf("No data - parsed CRLF OK CRLF\n");
             return STATE_MACHINE_READY_OK;
@@ -377,7 +378,7 @@ STATE_MACHINE_RETURN_VALUE at_command_parse(uint8_t current_char)
 
         else
         {
-            printf("Error in state 16, expected O, E, got char %c\n", current_char);
+            printf("Error in state 16, expected O, E, got char %d\n", current_char);
             return STATE_MACHINE_READY_WITH_ERROR;
         }
     }
